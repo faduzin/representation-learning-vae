@@ -2,21 +2,34 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import tensorflow as tf
 
-def load_data():
+def load_data(file_path):
     try:
-        data = pd.read_csv('data.csv')
+        data = pd.read_csv(file_path)
+        print('Data loaded successfully.')
         return data
     except FileNotFoundError:
-        print('File not found')
+        print('File not found.')
         return None
     
 
-def save_data(data):
+def save_data(data, file_path, file_name):
     try:
+        file = file_path + file_name
         data.to_csv('data.csv', index=False)
-        print('Data saved')
+        print('Data saved successfully.')
     except:
-        print('Error saving data')
+        print('Error saving data.')
+
+
+def data_info(data):
+    print(data.info())
+    print("-" * 50)
+    print(data.describe())
+    print("-" * 50)
+    print(data.head(5))
+    print("-" * 50)
+    print("Data shape: ",data.shape)
+    print("Amount of duplicates: ", data.duplicated().sum())
 
 
 def plot_loss(history):
@@ -43,16 +56,17 @@ def visualize_latent_space(encoder, data, labels):
 def save_model(model, name):
     try:
         model.save(name)
-        print('Model saved')
+        print('Model saved successfully.')
     except:
-        print('Error saving model')
+        print('Error saving model.')
 
 
 def load_model(name):
     try:
         model = tf.keras.models.load_model(name)
+        print('Model loaded successfully.')
         return model
     except:
-        print('Error loading model')
+        print('Error loading model.')
 
 

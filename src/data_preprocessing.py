@@ -20,20 +20,25 @@ def clean_data(df,
 
     if remove_outliers:
         try:
-            # Remove outliers
-            Q1 = df.quantile(0.25)
-            Q3 = df.quantile(0.75)
-            IQR = Q3 - Q1
-            df = df[~((df < (Q1 - 1.5 * IQR)) | (df > (Q3 + 1.5 * IQR))).any(axis=1)]
+            num_rows_before = df.shape[0]
+            for column in df.select_dtypes(include=['int', 'float']).columns:
+                Q1 = df[column].quantile(0.25)
+                Q3 = df[column].quantile(0.75)
+                IQR = Q3 - Q1
+                lower_bound = Q1 - 1.5 * IQR
+                upper_bound = Q3 + 1.5 * IQR
+                df = df[(df[column] >= lower_bound) & (df[column] <= upper_bound)]
+            num_rows_after = df.shape[0]
+            print(f'{num_rows_before - num_rows_after} outliers removed.')
         except:
             print('Error removing outliers')
     
     return df
 
 
-def encode_labels(df, columns):
+def label_encode(df):
     le = LabelEncoder()
-    for col in columns:
+    for col in df.select_dtypes(include=['object']).columns:
         try:
             df[col] = le.fit_transform(df[col])
         except:
@@ -42,8 +47,7 @@ def encode_labels(df, columns):
     return df
 
 
-def normalize_data(df,
-                   columns,
+def data_normalize(df,
                    method='standard'):
     match method:
         case 'standard':
@@ -55,9 +59,10 @@ def normalize_data(df,
             return df
         
     try:
-        df[columns] = scaler.fit_transform(df[columns])
+        df = scaler.fit_transform(df)
+        print('Data normalized successfully.')
     except:
-        print('Error normalizing data')
+        print('Error normalizing data.')
 
     return df
 
@@ -66,24 +71,20 @@ def preprocess_data(df,
                     remove_na=True,
                     remove_duplicates=True,
                     remove_outliers=True,
-                    encode_labels=True,
-                    normalize_data=True,
-                    label_columns=[],
-                    normalize_columns=[],
-                    normalize_method='standard'):
+                    encode_labels=True):
     df = clean_data(df, remove_na, remove_duplicates, remove_outliers)
     
     if encode_labels:
-        df = encode_labels(df, label_columns)
-    
-    if normalize_data:
-        df = normalize_data(df, normalize_columns, normalize_method)
+        df = label_encode(df)
     
     return df
 
 
-def split_data(df, target_column, test_size=0.2):
-    X = df.drop(columns=[target_column])
-    y = df[target_column]
-    
-    return train_test_split(X, y, test_size=test_size, random_state=42)
+def split_data(X, y, test_size=0.2):
+    try:
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=42)
+        print('Data split successfully.')
+        return X_train, X_test, y_train, y_test
+    except:
+        print('Error splitting data.')
+        return None
