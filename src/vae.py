@@ -54,6 +54,34 @@ def build_vae(input_shape, latent_dim):
     return vae
 
 
+def build_beta_vae(input_shape, latent_dim, beta):
+    # Define VAE
+    encoder = build_encoder(input_shape, latent_dim)
+    decoder = build_decoder(latent_dim, input_shape)
+    
+    # Define sampling layer
+    class Sampling(tf.keras.layers.Layer):
+        def call(self, inputs):
+            mean, log_var = inputs
+            epsilon = tf.random.normal(shape=tf.shape(mean))
+            return mean + tf.exp(0.5 * log_var) * epsilon
+        
+    # Define VAE model
+    inputs = tf.keras.layers.Input(shape=input_shape)
+    mean, log_var = tf.split(encoder(inputs), num_or_size_splits=2, axis=1)
+    z = Sampling()([mean, log_var])
+    outputs = decoder(z)
+    vae = tf.keras.Model(inputs, outputs)
+    
+    # Define loss
+    reconstruction_loss = tf.reduce_mean(tf.reduce_sum(tf.keras.losses.binary_crossentropy(inputs, outputs), axis=(1, 2)))
+    kl_loss = -0.5 * tf.reduce_mean(1 + log_var - tf.square(mean) - tf.exp(log_var))
+    vae_loss = reconstruction_loss + beta * kl_loss
+    vae.add_loss(vae_loss)
+    
+    return vae
+
+
 def train_vae(vae, 
               data, 
               epochs=100,
