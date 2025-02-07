@@ -42,14 +42,18 @@ def build_encoder(latent_dim, input_shape, topology=[256, 128, 64]):
     return encoder
 
 
-def build_decoder(latent_dim, input_shape, topology=[256, 128, 64]):
+def build_decoder(latent_dim, 
+                  input_shape, 
+                  topology=[256, 128, 64],
+                  activation='linear'
+                  ):
     decoder_inputs = layers.Input(shape=(latent_dim,), name="decoder_input_layer")
 
     x = layers.Dense(topology[2], activation='relu')(decoder_inputs)
     x = layers.Dense(topology[1], activation='relu')(x)
     x = layers.Dense(topology[0], activation='relu')(x)
 
-    decoder_outputs = layers.Dense(input_shape, activation='sigmoid')(x)
+    decoder_outputs = layers.Dense(input_shape, activation=activation)(x)
 
     decoder = models.Model(decoder_inputs, decoder_outputs, name="decoder")
     decoder.summary()
@@ -57,10 +61,11 @@ def build_decoder(latent_dim, input_shape, topology=[256, 128, 64]):
     return decoder
 
 class VAE(models.Model):
-    def __init__(self, encoder, decoder, **kwargs):
+    def __init__(self, encoder, decoder, beta=1.0, **kwargs):
         super(VAE, self).__init__(**kwargs)
         self.encoder = encoder
         self.decoder = decoder
+        self.beta = beta
         self.total_loss_tracker = metrics.Mean(name="total_loss")
         self.reconstruction_loss_tracker = metrics.Mean(name="reconstruction_loss")
         self.kl_loss_tracker = metrics.Mean(name="kl_loss")
@@ -81,9 +86,8 @@ class VAE(models.Model):
     def train_step(self, data):
         with tf.GradientTape() as tape:
             z_mean, z_log_var, reconstruction = self(data)
-            beta = 1
             reconstruction_loss = tf.reduce_mean(
-                beta * losses.binary_crossentropy(data, reconstruction, axis=1)
+                self.beta * losses.binary_crossentropy(data, reconstruction, axis=1)
             )
             kl_loss = tf.reduce_mean(
                 tf.reduce_sum(
@@ -107,9 +111,8 @@ class VAE(models.Model):
             data = data[0]
 
         z_mean, z_log_var, reconstruction = self(data)
-        beta = 1
         reconstruction_loss = tf.reduce_mean(
-            beta * losses.binary_crossentropy(data, reconstruction, axis=1)
+            self.beta * losses.binary_crossentropy(data, reconstruction, axis=1)
         )
         kl_loss = tf.reduce_mean(
             tf.reduce_sum(
