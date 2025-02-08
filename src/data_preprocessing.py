@@ -1,6 +1,8 @@
 import pandas as pd
 from sklearn.preprocessing import LabelEncoder, StandardScaler, MinMaxScaler
 from sklearn.model_selection import train_test_split
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 def clean_data(df,
                remove_na=True,
@@ -88,3 +90,24 @@ def split_data(X, y, test_size=0.2):
     except:
         print('Error splitting data.')
         return None
+    
+
+def plot_boxplot_and_histogram(df, column_name):
+    
+    fig, axes = plt.subplots(1, 
+                             2,  
+                             figsize=(12,4)) # Inicializa a figura
+
+    sns.boxplot(x=df[column_name], ax=axes[0]) # Plota o boxplot
+    axes[0].set_title(f"Box plot de {column_name}") # Adiciona o título
+
+    axes[1].hist(df[column_name],
+                   bins=30,
+                   edgecolor="Black",
+                   alpha=0.7) # Plota o histograma
+    axes[1].set_title(f"Histograma de {column_name}") # Adiciona o título
+    axes[1].set_xlabel(column_name) # Adiciona o label do eixo x
+    axes[1].set_ylabel("Frequência") # Adiciona o label do eixo y
+
+    plt.tight_layout() # Ajusta o layout
+    plt.show() # Exibe o gráfico
