@@ -3,6 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import tensorflow as tf
 import tensorflow.keras.backend as K
+import seaborn as sns
 from scipy.stats import norm
 from tensorflow.keras import (
     layers, 
@@ -205,7 +206,7 @@ def plot_latent_space(encoder, example, example_labels):
     plt.show()
 
 
-def plot_reduced_pca(data, labels):
+def plot_reduced_pca(data, labels, name):
     # Reduce to 2D using PCA
     pca = PCA(n_components=2)
     reduced_data = pca.fit_transform(data)
@@ -216,8 +217,29 @@ def plot_reduced_pca(data, labels):
     plt.colorbar(label="Class Labels")
     plt.xlabel("Principal Component 1")
     plt.ylabel("Principal Component 2")
-    plt.title("PCA Visualization of Encoded Data")
+    plt.title(f"PCA Visualization of {name} Data")
     plt.show()
 
     # Print explained variance ratio
     print(f"Explained variance ratio: {pca.explained_variance_ratio_}") 
+
+
+def plot_pairplot(X_test, reconstructions, feature_names):
+    # Ensure data has the same shape
+    assert X_test.shape == reconstructions.shape, "Mismatch in data dimensions!"
+
+    # Convert to DataFrame with feature names
+    df_original = pd.DataFrame(X_test, columns=feature_names)
+    df_reconstructed = pd.DataFrame(reconstructions, columns=feature_names)
+
+    # Add labels to distinguish datasets
+    df_original["Type"] = "Original"
+    df_reconstructed["Type"] = "Reconstructed"
+
+    # Concatenate for visualization
+    df_combined = pd.concat([df_original, df_reconstructed])
+
+    # Pairplot with color-coded types
+    sns.pairplot(df_combined, hue="Type", plot_kws={"alpha": 0.5}, corner=True)
+    plt.suptitle("Pairplot: Original vs Reconstructed Data", y=1.02)
+    plt.show()
