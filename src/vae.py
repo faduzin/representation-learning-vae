@@ -53,12 +53,21 @@ def build_decoder(latent_dim,
     x = layers.Dense(topology[1], activation='relu')(x)
     x = layers.Dense(topology[0], activation='relu')(x)
 
-    decoder_outputs = layers.Dense(input_shape, activation=activation)(x)
+    decoder_outputs = layers.Dense(input_shape, activation=activation, name="decoder_outputs")(x)
 
     decoder = models.Model(decoder_inputs, decoder_outputs, name="decoder")
     decoder.summary()
     
     return decoder
+
+def optimizer_adam(lr=1e-3):
+    try:
+        optimizer = optimizers.Adam(learning_rate=lr)
+        print(f"Successfuly created optimizer: Adam with learning rate {lr}")
+    except Exception as e:
+        print(f"Error creating optimizer: {e}")
+        return None
+    return optimizer
 
 class VAE(models.Model):
     def __init__(self, encoder, decoder, beta=1.0, **kwargs):
@@ -69,6 +78,7 @@ class VAE(models.Model):
         self.total_loss_tracker = metrics.Mean(name="total_loss")
         self.reconstruction_loss_tracker = metrics.Mean(name="reconstruction_loss")
         self.kl_loss_tracker = metrics.Mean(name="kl_loss")
+        self.history_loss = []
 
     @property
     def metrics(self):
@@ -87,15 +97,14 @@ class VAE(models.Model):
         with tf.GradientTape() as tape:
             z_mean, z_log_var, reconstruction = self(data)
             reconstruction_loss = tf.reduce_mean(
-                self.beta * losses.binary_crossentropy(data, reconstruction, axis=1)
-            )
-            kl_loss = tf.reduce_mean(
-                tf.reduce_sum(
-                    -0.5 * (1 + z_log_var - tf.square(z_mean) - tf.exp(z_log_var)), axis=1
-                )
+            losses.binary_crossentropy(data, reconstruction, axis=1)
             )
 
-            total_loss = reconstruction_loss + kl_loss
+            kl_loss = -0.5 * tf.reduce_mean(
+                tf.reduce_sum(1 + z_log_var - tf.square(z_mean) - tf.exp(z_log_var), axis=1)
+            )
+
+            total_loss = reconstruction_loss + self.beta * kl_loss
         
         grads = tape.gradient(total_loss, self.trainable_weights)
         self.optimizer.apply_gradients(zip(grads, self.trainable_weights))
@@ -112,15 +121,15 @@ class VAE(models.Model):
 
         z_mean, z_log_var, reconstruction = self(data)
         reconstruction_loss = tf.reduce_mean(
-            self.beta * losses.binary_crossentropy(data, reconstruction, axis=1)
-        )
-        kl_loss = tf.reduce_mean(
-            tf.reduce_sum(
-                -0.5 * (1 + z_log_var - tf.square(z_mean) - tf.exp(z_log_var)), axis=1
-            )
+        losses.binary_crossentropy(data, reconstruction, axis=1)
         )
 
-        total_loss = reconstruction_loss + kl_loss
+        kl_loss = -0.5 * tf.reduce_mean(
+            tf.reduce_sum(1 + z_log_var - tf.square(z_mean) - tf.exp(z_log_var), axis=1)
+        )
+
+        total_loss = reconstruction_loss + self.beta * kl_loss
+
 
         return {
             "total_loss": total_loss,
@@ -128,6 +137,33 @@ class VAE(models.Model):
             "kl_loss": kl_loss
         }
 
+
+class LossTracker(tf.keras.callbacks.Callback):
+    def __init__(self):
+        super().__init__()
+        self.history_loss = []
+
+    def on_epoch_end(self, epoch, logs=None):
+        if logs is not None:
+            self.history_loss.append(logs["total_loss"])  # Store total loss per epoch
+            print(f"Epoch {epoch+1}, Loss: {logs['total_loss']:.4f}")  # Print loss per epoch
+
+
+def moving_average(data, window_size=5):
+    return np.convolve(data, np.ones(window_size)/window_size, mode='valid')
+
+def plot_loss(loss_tracker):
+    smoothed_loss = moving_average(loss_tracker.history_loss, window_size=5)
+
+    plt.figure(figsize=(8, 5))
+    plt.plot(loss_tracker.history_loss, label="Original Loss", alpha=0.4)  # Faded original
+    plt.plot(range(len(smoothed_loss)), smoothed_loss, label="Smoothed Loss", linewidth=2)
+    plt.xlabel("Epochs")
+    plt.ylabel("Loss Value")
+    plt.title("Smoothed VAE Training Loss Curve")
+    plt.legend()
+    plt.grid(True)
+    plt.show()
 
 def model_checkpoint_callback(filepath):
     model_checkpoint = callbacks.ModelCheckpoint(
@@ -184,4 +220,4 @@ def plot_reduced_pca(data, labels):
     plt.show()
 
     # Print explained variance ratio
-    print(f"Explained variance ratio: {pca.explained_variance_ratio_}")
+    print(f"Explained variance ratio: {pca.explained_variance_ratio_}") 
