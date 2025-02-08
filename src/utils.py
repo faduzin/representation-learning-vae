@@ -1,6 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import tensorflow as tf
+import seaborn as sns
 
 def load_data(file_path):
     try:
@@ -41,31 +42,9 @@ def plot_loss(history):
     plt.show()
 
 
-def visualize_latent_space(encoder, data, labels):
-    # Encode data
-    encoded_data = encoder.predict(data)
-    
-    # Plot
-    plt.figure(figsize=(6, 6))
-    plt.scatter(encoded_data[:, 0], encoded_data[:, 1], c=labels, cmap='viridis')
-    plt.colorbar()
+def plot_correlations(data):
+    plt.figure(figsize=(12, 8))
+    sns.heatmap(data.corr(), annot=True, cmap='coolwarm')
+    plt.title('Correlation Heatmap')
     plt.show()
-
-
-def save_model(model, name):
-    try:
-        model.save(name)
-        print('Model saved successfully.')
-    except:
-        print('Error saving model.')
-
-
-def load_model(name):
-    try:
-        model = tf.keras.models.load_model(name)
-        print('Model loaded successfully.')
-        return model
-    except:
-        print('Error loading model.')
-
 
