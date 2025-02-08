@@ -79,7 +79,6 @@ class VAE(models.Model):
         self.total_loss_tracker = metrics.Mean(name="total_loss")
         self.reconstruction_loss_tracker = metrics.Mean(name="reconstruction_loss")
         self.kl_loss_tracker = metrics.Mean(name="kl_loss")
-        self.history_loss = []
 
     @property
     def metrics(self):
@@ -181,7 +180,6 @@ def model_checkpoint_callback(filepath):
 
 
 def predict(vae, data, label, n_to_predict=1000):
-    n_to_predict = 5000
     example = data[:n_to_predict]
     example_labels = label[:n_to_predict]
     z_mean, z_log_var, reconstructions = vae.predict(example)
@@ -224,13 +222,15 @@ def plot_reduced_pca(data, labels, name):
     print(f"Explained variance ratio: {pca.explained_variance_ratio_}") 
 
 
-def plot_pairplot(X_test, reconstructions, feature_names):
+def plot_pairplot(X_test, reconstructions, feature_names, X):
     # Ensure data has the same shape
     assert X_test.shape == reconstructions.shape, "Mismatch in data dimensions!"
 
+    pairplot_columns = pd.Index([item for item in X.columns if item in feature_names])
+
     # Convert to DataFrame with feature names
-    df_original = pd.DataFrame(X_test, columns=feature_names)
-    df_reconstructed = pd.DataFrame(reconstructions, columns=feature_names)
+    df_original = pd.DataFrame(X_test, columns=X.columns)[pairplot_columns]
+    df_reconstructed = pd.DataFrame(reconstructions, columns=X.columns)[pairplot_columns]
 
     # Add labels to distinguish datasets
     df_original["Type"] = "Original"
