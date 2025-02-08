@@ -12,13 +12,12 @@ def load_data(file_path):
         return None
     
 
-def save_data(data, file_path, file_name):
-    try:
-        file = file_path + file_name
-        data.to_csv('data.csv', index=False)
-        print('Data saved successfully.')
-    except:
-        print('Error saving data.')
+def save_data(df, file_path):
+    try: # Tenta salvar o arquivo
+        df.to_csv(file_path, index=False) # Salva o dataframe
+        print(f"Arquivo salvo em: {file_path}.") # Exibe mensagem de sucesso
+    except: # Se houver erro
+        raise("Falha ao salvar arquivo.") # Exibe mensagem de erro
 
 
 def data_info(data):
